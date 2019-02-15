@@ -47,12 +47,14 @@ if api_version == 3:
     user_domain = os.environ['OS_USER_DOMAIN_NAME']
     project_domain = os.environ['OS_PROJECT_DOMAIN_NAME']
     auth_url = os.environ['OS_AUTH_URL']
+    api_endpoint = "projects"
 else:
     assert_parameters(ENV_VARS_V2)
     username = os.environ['OS_USERNAME']
     password = os.environ['OS_PASSWORD']
     project_name = os.environ['OS_TENANT_NAME']
     auth_url = os.environ['OS_AUTH_URL']
+    api_endpoint = "tenants"
 
 # get params
 
@@ -205,10 +207,6 @@ except Exception as e:
     sys.exit(-1)
 
 try: 
-    if api_version == 3:
-        api_endpoint = "projects"
-    else:
-        api_endpoint = "tenants"
     if not(private_iaas_key_state) and opts.enable:
         # flip private_iaas key state to true
         print("Enabling private_iaas metadata property...")
