@@ -28,13 +28,24 @@ Do that on every controller node.
 #### Modify /etc/nova/nova.conf:
 
 * Enable all scheduler filters for inclusion in the nova scheduler:
-	
+
+for Openstack Queens use:
+
 ```
 available_filters=nova.scheduler.filters.all_filters
 
 enabled_filters=PrivateIaasFilter,RetryFilter,AvailabilityZoneFilter,RamFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
 
 ```
+
+for Openstack Newton or older:
+```
+scheduler_available_filters=nova.scheduler.filters.all_filters
+
+scheduler_default_filters=PrivateIaasFilter,RetryFilter,AvailabilityZoneFilter,RamFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
+
+```
+
 * Configure the scheduler options by adding a config stanza in nova.conf:
 
 ```
