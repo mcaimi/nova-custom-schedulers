@@ -53,7 +53,7 @@ class PrivateIaasFilter(filters.BaseHostFilter):
     # override constructor, add custom elements to filter class
     def __init__(self):
         """ Add keystone glue to resolve extra_specs for private iaas tenants """
-         # auth url
+        # auth url
         if CONF.keystone_version == 2:
             LOG.info("PRIVATEIAAS: Initializing v2.0 API session")
             self.auth_url = CONF.keystone_url + "/v2.0"
@@ -158,7 +158,8 @@ class PrivateIaasFilter(filters.BaseHostFilter):
         #    current_project_id = instance_properties.get('project_id', None)
         #else:
         #    current_project_id = spec_obj.get('project_id', None)
-        current_project_id = getattr(spec_obj, 'project_id', None)
+        # also, handle both v3 and v3 API versions
+        current_project_id = getattr(spec_obj, 'project_id', None) or getattr(spec_obj, 'tenant_id', None)
 
         if current_project_id is None:
             LOG.error("[PRIVATEIAAS]: request is broken. Missing project UUID")
