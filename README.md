@@ -61,7 +61,7 @@ project_domain_name="Default"
 keystone_username="admin"
 keystone_password="P4ssw0rd"
 # Endpoint keystone INTERNAL
-keystone_url="http://10.3.41.74:5000"
+keystone_url="http://192.168.1.174:5000"
 # project in which the user has the admin role
 keystone_tenant_name="admin"
 # debug logging
@@ -195,4 +195,128 @@ Starting operation on tenant id -> dev_tenant [010926a1dc6b4c15bf4ec22b52e60939]
 Enabling private_iaas metadata property...
 {"tenant": {"description": "development_tenant", "extra": {"testproperty": "test123", "private_iaas": true}, "testproperty": "test123", "enabled": true, "id": "010926a1dc6b4c15bf4ec22b52e60939", "private_iaas": true, "name": "dev_tenant"}}
 ```
+
+### NOVA Hypervisor Type
+
+This filter allows the operator to isolate tenants to specific hypervisors.
+This is useful for tenants that need to only deploy on a particular hypervisor technology (be it Qemu, VMware or HyperV)
+
+#### Prerequisites:
+
+  - Highly Available Openstack Installation (We use the one from RedHat) version Mitaka or higher. Tested until Queens.
+  - Root access on every controller node
+  - Keystone Admin Access
+  - An admin-enabled user on keystone (nova or admin).
+
+#### Install the scheduler filter:
+
+Just copy the scheduler python file in the site-packages library path:
+
+```
+root@controller-0 neutron-n-0:~# cp hypervisor_type_filter.py /usr/lib/python2.7/site-packages/nova/scheduler/filters/
+
+```
+
+Do that on every controller node.
+
+#### Modify /etc/nova/nova.conf:
+
+* Enable all scheduler filters for inclusion in the nova scheduler:
+
+for Openstack Queens use:
+
+```
+available_filters=nova.scheduler.filters.all_filters
+
+enabled_filters=HypervisorTypeFilter,RetryFilter,AvailabilityZoneFilter,RamFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
+
+```
+
+for Openstack Newton or older:
+```
+scheduler_available_filters=nova.scheduler.filters.all_filters
+
+scheduler_default_filters=HypervisorTypeFilter,RetryFilter,AvailabilityZoneFilter,RamFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
+
+```
+
+* Configure a new stanza in the nova configuration file:
+
+```
+[hypervisor_type_scheduler]
+keystone_version=3
+# Utenza applicativa admin
+keystone_username="admin"
+keystone_password="P4ssw0rd"
+# Endpoint keystone INTERNAL
+keystone_url="http://192.168.1.174:5000"
+# Tenant "services"
+keystone_tenant_name="admin"
+# attiva log di debug
+debug=True
+# Set the default behaviour in case keystone is unreachable
+# TRUE == deploy anyways and let the admin move instances afterwards
+# FALSE == abort the deployment with a "No host available" error message
+keystone_unreachable_defaults_to_true=False
+user_domain_name="Default"
+project_domain_name="Default"
+
+```
+
+* Restart the nova scheduler service on all controller nodes:
+
+```
+ root@controller-0 neutron-n-0:~# pcs resource |grep nova-scheduler
+ Clone Set: openstack-nova-scheduler-clone [openstack-nova-scheduler]
+
+ root@controller-0 neutron-n-0:~# pcs resource restart openstack-nova-scheduler-clone 
+```
+
+Check the logs for errors.
+
+### Configure the tenant
+
+* Set the 'tenant_type' extra-key in the keystone database:
+
+```
+[root@controller-0 ~(keystone_admin)]# openstack project list
++----------------------------------+------------+
+| ID                               | Name       |
++----------------------------------+------------+
+| 0649a21628fd4f098d5217ada6fd4058 | services   |
+| 6650b690c4e046248f879ba4165407ea | dev_tenant |
+| 79cbac1ae9654e028278568beab4368f | test       |
+| d6e5259e4b8c4e72bedc31d4e1e8b265 | admin      |
++----------------------------------+------------+
+[root@controller-0 ~(keystone_admin)]# openstack project show 6650b690c4e046248f879ba4165407ea
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description |                                  |
+| domain_id   | default                          |
+| enabled     | True                             |
+| id          | 6650b690c4e046248f879ba4165407ea |
+| is_domain   | False                            |
+| name        | dev_tenant                       |
+| parent_id   | default                          |
+| tags        | []                               |
++-------------+----------------------------------+
+[root@controller-0 ~(keystone_admin)]# openstack project set 6650b690c4e046248f879ba4165407ea --property tenant_type=QEMU
+[root@controller-0 ~(keystone_admin)]# openstack project show 6650b690c4e046248f879ba4165407ea
++-------------+----------------------------------+
+| Field       | Value                            |
++-------------+----------------------------------+
+| description |                                  |
+| domain_id   | default                          |
+| enabled     | True                             |
+| id          | 6650b690c4e046248f879ba4165407ea |
+| is_domain   | False                            |
+| name        | dev_tenant                       |
+| parent_id   | default                          |
+| tags        | []                               |
+| tenant_type | QEMU                             |
++-------------+----------------------------------+
+
+```
+
 
